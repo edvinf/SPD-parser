@@ -27,11 +27,13 @@ readForm <- function(filename, formcode, colspec, coltypes, encoding="latin1"){
 
   file.remove(tempf)
 
-  return(form)
+  return(data.table::as.data.table(form))
 }
 
 #' Parses all S-lines from file (spesified in SPD handbook jan. 2010)
-#' @noRd
+#' @param file path to file (SPD-format)
+#' @return data.table
+#' @export
 readSform <-function (file){
   coltypes = "iccciiccciiiiiicccciicciiiiiiiicciiididciccccc"
   colspec <- readr::fwf_cols(
@@ -110,7 +112,9 @@ readSform <-function (file){
 }
 
 #' Parses all T-lines from file (spesified in SPD handbook (missing mage, genetikk))
-#' @noRd
+#' @param file path to file (SPD-format)
+#' @return data.table
+#' @export
 readTform <-function (file){
   coltypes = "iccciiccccccccciicciiicccc"
   colspec <- readr::fwf_cols(aar=c(2,4),
@@ -160,7 +164,9 @@ readTform <-function (file){
 }
 
 #' Parses all U-lines from file (spesified in SPD handbook jan. 2010)
-#' @noRd
+#' @param file path to file (SPD-format)
+#' @return data.table
+#' @export
 readUform <-function (file){
   coltypes = "iccciicccccccii"
   colspec <- readr::fwf_cols(aar=c(2,4),
@@ -196,7 +202,9 @@ readUform <-function (file){
 }
 
 #' Parses all V-lines from file (spesified in SPD handbook jan. 2010)
-#' @noRd
+#' @param file path to file (SPD-format)
+#' @return data.table
+#' @export
 readVform <-function (file){
   coltypes = "iccciiccccccciciccccccccciiiicccciccccciiii"
   colspec <- readr::fwf_cols(aar=c(2,4),
@@ -267,7 +275,9 @@ readVform <-function (file){
 }
 
 #' Parses all V-lines from file (spesified in SPD handbook jan. 2010)
-#' @noRd
+#' @param file path to file (SPD-format)
+#' @return data.table
+#' @export
 readWform <-function (file){
   coltypes = "iccciicccccccccciciccic"
   colspec <- readr::fwf_cols(aar=c(2,4),
@@ -315,21 +325,22 @@ readWform <-function (file){
   return(wform)
 }
 
-#'  SPD parser
-#'  @description Parses SPD froms (spesified in SPD handbook jan. 2010)
-#'  @details
-#'   Units are only standardized when interpretation does not depend on other fields.
-#'   Incomplete forms will produce warnings (parsing failures). Missing columns will be interpreted as NAs
-#'  @param filename path to file (SPD-format)
-#'  @param encoding encoding for the file
-#'  @retrun list with elements:
-#'   \describe{
-#'    \item{Sform}{S-form (stations / hauls)}
-#'    \item{Tform}{T-form (catch samples)}
-#'    \item{Uform}{U-form (length frequencies (fish))}
-#'    \item{Vform}{V-form (individual measurements (fish))}
-#'    \item{Wform}{W-form (length frequencies / devstage frequencies (prey))}
-#'   }
+#' SPD parser
+#' @description Parses SPD froms (spesified in SPD handbook jan. 2010)
+#' @details
+#'  Units are only standardized when interpretation does not depend on other fields.
+#'  Incomplete forms will produce warnings (parsing failures). Missing columns will be interpreted as NAs
+#' @param filename path to file (SPD-format)
+#' @param encoding encoding for the file
+#' @return list with elements:
+#'  \describe{
+#'   \item{Sform}{S-form (stations / hauls)}
+#'   \item{Tform}{T-form (catch samples)}
+#'   \item{Uform}{U-form (length frequencies (fish))}
+#'   \item{Vform}{V-form (individual measurements (fish))}
+#'   \item{Wform}{W-form (length frequencies / devstage frequencies (prey))}
+#'  }
+#' @export
 parseSPD <- function(filename, encoding="latin1"){
   Sform <- NULL
   Tform <- NULL

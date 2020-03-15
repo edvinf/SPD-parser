@@ -1,6 +1,7 @@
 testfile <- system.file("extdata", "testresources", "fisk2018_20181221_trunc.spd", package="SPD")
+testfileW <- system.file("extdata", "testresources", "ex_w.spd", package="SPD")
 
-parsed <- parseSPD(testfile)
+parsed <- expect_warning(parseSPD(testfile))
 
 context("Test S form")
 expect_true(all(parsed$Sform$aar == 2018))
@@ -23,3 +24,10 @@ expect_true(all(parsed$Vform$aar == 2018))
 expect_true(all(!is.na(parsed$Vform$artskode)))
 expect_true(all(!is.na(parsed$Vform$lengde)))
 expect_equal(ncol(parsed$Vform), 43)
+
+parsed <- expect_warning(parseSPD(testfileW))
+context("Test W form")
+expect_true(all(parsed$Wform$aar == 2018))
+expect_true(all(!is.na(parsed$Wform$artskode)))
+expect_true(all(!is.na(parsed$Wform$byttedyr.vekt)))
+expect_equal(ncol(parsed$Wform), 23)

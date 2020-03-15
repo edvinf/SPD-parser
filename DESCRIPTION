@@ -1,14 +1,16 @@
 Package: SPD
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Parse SPD files
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Author: Edvin Fuglebakk
+Maintainer: Edvin Fuglebakk <Edvin.Fuglebakk@hi.no>
+Description: Reads SPD files as current with the handbook in Jan 2010.
+    Ad-hoc implementation. Not thoroughly tested.
+License: LGPL-2.1
 Encoding: UTF-8
 LazyData: true
-Imports: readr
+Imports: readr, data.table
 Suggests: 
     testthat (>= 2.1.0)
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.0.2
