@@ -1,237 +1,335 @@
-#' @noRd
-getCols <- function(line, colstart, colstop=colstart){
-  return(substr(line, colstart, colstop))
-}
 
 #' @noRd
-parseInt <- function(int){
-  if (trimws(int)==""){
-    return(NA)
-  }
-  else{
-    return(as.integer(trimws(int)))
-  }
+fixYear <- function(year){
+  y <- year
+  y[year<100] <- year[year<100] + 2000
+  y[year>100] <- year[year>100] + 1000
+  return(y)
 }
 
 #' @noRd
-parseString <- function(string){
-  return(trimws(string))
+readForm <- function(filename, formcode, colspec, coltypes, encoding="latin1"){
+
+  message("...... extracting lines ...")
+  loc <- readr::default_locale()
+  loc$encoding <- encoding
+  lines <- readr::read_fwf(filename, readr::fwf_cols(type=c(1,1), rest=c(2,NA)), col_types = "cc", trim_ws = F, locale = loc)
+  lines <- lines[lines$type==formcode,]
+  #write lines to tempfile
+  tempf <- tempfile()
+  readr::write_delim(lines[,2], tempf, delim="", col_names = F)
+
+  #read from tempfile
+  message("...... parsing ...")
+  colspec$begin <- colspec$begin -1
+  colspec$end <- colspec$end -1
+  form <- readr::read_fwf(tempf, colspec, col_types = coltypes)
+
+  file.remove(tempf)
+
+  return(form)
 }
 
+#' Parses all S-lines from file (spesified in SPD handbook jan. 2010)
 #' @noRd
-parseYear <- function(year){
-  if (as.integer(year) < 100){
-    year <- as.integer(paste("2", year, sep=""))
+readSform <-function (file){
+  coltypes = "iccciiccciiiiiicccciicciiiiiiiicciiididciccccc"
+  colspec <- readr::fwf_cols(
+           aar=c(2,4),
+
+           land=c(5,6),
+           skipskode=c(7,7),
+           skip=c(8,13),
+
+           mnd=c(14,15),
+           dag=c(16,17),
+
+           st.nr=c(18,21),
+           serie.nr=c(22,26),
+           st.type=c(27,27),
+
+           bredde.gr=c(28,29),
+           bredde.min=c(30,31),
+           bredde.des.min=c(32,32),
+           lengde.gr=c(33,35),
+           lengde.min=c(36,37),
+           lengde.des.min=c(38,38),
+
+           nsov=c(39,39),
+           system=c(40,40),
+           omrade=c(41,42),
+           lokalitet=c(43,45),
+
+           bunndyp=c(46,49),
+           ant.redskap=c(50,51),
+
+           redskap.kode=c(52,55),
+           redskap.nr=c(56,57),
+
+           retning=c(58,59),
+           fart=c(60,61),
+           start.tid.timer=c(62,63),
+           start.tid.min=c(64,65),
+           start.logg=c(66,69),
+           stopp.tid.timer=c(70,71),
+           stopp.tid.min=c(72,73),
+           distanse=c(74,76),
+
+           tilstand=c(77,77),
+           kvalitet=c(78,78),
+
+           fiskedyp.maks=c(79,82),
+           fiskedyp.min=c(83,86),
+           apning=c(87,89),
+           st.avvik.apning=c(90,91),
+           dorspredning=c(92,94),
+           st.avvik.dorspredning=c(95,96),
+
+           spesialkode=c(98,99),
+
+           wirelengde=c(100,103),
+
+           kvalitetsmerking=c(122,122),
+           gjeldende.kvalitetsprosedyre=c(123,124),
+           omkodingsprogram=c(125,126),
+           originalt.format=c(127,128),
+           gjeldende.format=c(129,130))
+
+  stopifnot(nrow(colspec) == nchar(coltypes))
+
+  sform <- readForm(file, "S", colspec, coltypes = coltypes)
+
+  if (nrow(sform) > 0){
+    sform$aar <- fixYear(sform$aar)
+    sform$st.avvik.apning <- sform$st.avvik.apning/10
+    sform$st.avvik.dorspredning <- sform$st.avvik.dorspredning/10
   }
-  else{
-    year <- as.integer(paste("1", year, sep=""))
-  }
-  return(year)
+
+
+  return(sform)
 }
 
-readForm <- function(filename, formcode, encoding="latin1"){
-  f <- file(filename, open = "r")
-  lines <- readLines(f, encoding = encoding)
-  close(f)
-
-  for (l in lines){
-    if (substr(l,1,1) == formcode){
-      uselines <- c(uselines, l)
-    }
-  }
-
-  return(uselines)
-}
-
-#' Parses line from S-form (spesified in SPD handbook jan. 2010)
+#' Parses all T-lines from file (spesified in SPD handbook (missing mage, genetikk))
 #' @noRd
-parseSline <- function(line){
-  if (getCols(line,1,1) != "S"){
-    stop("Not an S-line")
+readTform <-function (file){
+  coltypes = "iccciiccccccccciicciiicccc"
+  colspec <- readr::fwf_cols(aar=c(2,4),
+
+                             land=c(5,6),
+                             skipskode=c(7,7),
+                             skip=c(8,13),
+
+                             mnd=c(14,15),
+                             dag=c(16,17),
+
+                             st.nr=c(18,21),
+                             serie.nr=c(22,26),
+                             artskode=c(27,27),
+                             art=c(28,39),
+                             del.nr=c(40,40),
+                             provetype=c(41,42),
+                             gruppe=c(43,44),
+                             kons=c(45,45),
+                             mal.fangst=c(46,46),
+
+                             fangst.vekt.vol=c(47,53),
+                             fangst.antall=c(54,59),
+
+                             mal.prove=c(60,60),
+                             lengdemal=c(61,61),
+
+                             lengdeprove.vekt.vol=c(62,67),
+                             lengdeprove.antall=c(68,71),
+                             individprove.antall=c(72,75),
+
+                             ot.skj=c(76,76),
+                             parasitt=c(77,77),
+                             mage=c(78,78),
+                             genetikk=c(79,79))
+
+  stopifnot(nrow(colspec) == nchar(coltypes))
+
+  tform <- readForm(file, "T", colspec, coltypes = coltypes)
+
+  if (nrow(tform) > 0){
+    tform$aar <- fixYear(tform$aar)
   }
 
-  st.avvik.apning=parseInt(getCols(line,90,91))
-  if (!is.na(st.avvik.apning)){
-    st.avvik.apning <- st.avvik.apning/10
-  }
 
-  st.avvik.dorspredning=parseInt(getCols(line,95,97))
-  if (!is.na(st.avvik.dorspredning)){
-    st.avvik.dorspredning <- st.avvik.dorspredning/10
-  }
-
-  return(data.table::data.table(aar=parseYear(getCols(line,2,4)),
-                                land=parseString(getCols(line, 5,6)),
-                                skipskode=parseString(getCols(line, 7)),
-                                skip=parseString(getCols(line, 8,13)),
-                                mnd=parseInt(getCols(line, 14,15)),
-                                dag=parseInt(getCols(line, 16,17)),
-                                st.nr=parseString(getCols(line, 18,21)),
-                                serie.nr=parseString(getCols(line, 22,26)),
-                                st.type=parseString(getCols(line, 27)),
-                                bredde.gr=parseInt(getCols(line, 28,29)),
-                                bredde.min=parseInt(getCols(line, 30,31)),
-                                bredde.des.min=parseInt(getCols(line, 32)),
-                                lengde.gr=parseInt(getCols(line, 33,35)),
-                                lengde.min=parseInt(getCols(line, 36,37)),
-                                lengde.des.min=parseInt(getCols(line, 38)),
-                                nsov=parseString(getCols(line,39)),
-                                system=parseString(getCols(line,40)),
-                                omrade=parseString(getCols(line,41,42)),
-                                lokalitet=parseString(getCols(line,43,45)),
-                                bunndyp=parseInt(getCols(line,46,49)),
-                                ant.redskap=parseInt(getCols(line,50,51)),
-                                redskap.kode=parseString(getCols(line,52,55)),
-                                redskap.nr=parseString(getCols(line,56,57)),
-                                retning=parseInt(getCols(line,58,59)),
-                                fart=parseInt(getCols(line,60,61)),
-                                start.tid.timer=parseInt(getCols(line,62,63)),
-                                start.tid.min=parseInt(getCols(line,64,65)),
-                                start.logg=parseInt(getCols(line,66,69)),
-                                stopp.tid.timer=parseInt(getCols(line,70,71)),
-                                stopp.tid.min=parseInt(getCols(line,72,73)),
-                                distanse=parseInt(getCols(line,74,76)),
-                                tilstand=parseString(getCols(line,77)),
-                                kvalitet=parseString(getCols(line,78)),
-                                fiskedyp.maks=parseInt(getCols(line,79,82)),
-                                fiskedyp.min=parseInt(getCols(line,83,86)),
-                                apning=parseInt(getCols(line,87,89)),
-                                st.avvik.apning=st.avvik.apning,
-                                dorspredning=parseInt(getCols(line,92,94)),
-                                st.avvik.dorspredning=st.avvik.dorspredning,
-                                spesialkode=parseString(getCols(line,98,99)),
-                                wirelengde=parseInt(getCols(line,100,103)),
-                                kvalitetsmerking=parseString(getCols(line,122)),
-                                gjeldende.kvalitetsprosedyre=parseString(getCols(line,123,124)),
-                                omkodingsprogram=parseString(getCols(line,125,126)),
-                                originalt.format=parseString(getCols(line,127,128)),
-                                gjeldende.format=parseString(getCols(line,129,130))
-                                ))
+  return(tform)
 }
 
-#' Parses line from T-form (spesified in SPD handbook jan. 2010)
+#' Parses all U-lines from file (spesified in SPD handbook jan. 2010)
 #' @noRd
-parseTline <- function(line){
-  if (getCols(line,1,1) != "T"){
-    stop("Not a T-line")
+readUform <-function (file){
+  coltypes = "iccciicccccccii"
+  colspec <- readr::fwf_cols(aar=c(2,4),
+
+                             land=c(5,6),
+                             skipskode=c(7,7),
+                             skip=c(8,13),
+
+                             mnd=c(14,15),
+                             dag=c(16,17),
+
+                             st.nr=c(18,21),
+                             serie.nr=c(22,26),
+                             artskode=c(27,27),
+                             art=c(28,39),
+                             del.nr=c(40,40),
+
+                             intervall=c(41,41),
+                             kjonn=c(42,42),
+                             minste.lengdegr=c(43,45),
+                             lengdefrekvenser.i.antall=c(40,40)
+                             )
+
+  stopifnot(nrow(colspec) == nchar(coltypes))
+
+  uform <- readForm(file, "U", colspec, coltypes = coltypes)
+
+  if (nrow(uform) > 0){
+    uform$aar <- fixYear(uform$aar)
   }
 
-  return(data.table::data.table(aar=parseYear(getCols(line,2,4)),
-                                land=parseString(getCols(line, 5,6)),
-                                skipskode=parseString(getCols(line, 7)),
-                                skip=parseString(getCols(line, 8,13)),
-                                mnd=parseInt(getCols(line, 14,15)),
-                                dag=parseInt(getCols(line, 16,17)),
-                                st.nr=parseString(getCols(line, 18,21)),
-                                serie.nr=parseString(getCols(line, 22,26)),
-                                artskode=parseString(getCols(line, 27)),
-                                art=parseString(getCols(line,28,39)),
-                                del.nr=parseString(getCols(line,40)),
-                                provetype=parseString(getCols(line,41,42)),
-                                gruppe=parseString(getCols(line,43,44)),
-                                kons=parseString(getCols(line,45)),
-                                mal.fangst=parseString(getCols(line,46)),
-                                fangst.vekt.vol=parseInt(getCols(line,47,53)),
-                                fangst.antall=parseInt(getCols(line,54,59)),
-                                mal.prove=parseString(getCols(line,60)),
-                                lengdemal=parseString(getCols(line,61)),
-                                lengdeprove.vekt.vol=parseInt(getCols(line,62,67)),
-                                lengdeprove.antall=parseInt(getCols(line,68,71)),
-                                individprove.antall=parseInt(getCols(line,72,75)),
-                                ot.skj=parseString(getCols(line, 76)),
-                                parasitt=parseString(getCols(line, 77)),
-                                mage=parseString(getCols(line, 78)),
-                                genetikk=parseString(getCols(line, 79))
-                                ))
+  return(uform)
 }
 
-#' Parses line from U-form (spesified in SPD handbook jan. 2010)
+#' Parses all V-lines from file (spesified in SPD handbook jan. 2010)
 #' @noRd
-parseUline <- function(line){
-  if (getCols(line,1,1) != "U"){
-    stop("Not a U-line")
+readVform <-function (file){
+  coltypes = "iccciiccccccciciccccccccciiiicccciccccciiii"
+  colspec <- readr::fwf_cols(aar=c(2,4),
+
+                             land=c(5,6),
+                             skipskode=c(7,7),
+                             skip=c(8,13),
+
+                             mnd=c(14,15),
+                             dag=c(16,17),
+
+                             st.nr=c(18,21),
+                             serie.nr=c(22,26),
+                             artskode=c(27,27),
+                             art=c(28,39),
+                             del.nr=c(40,40),
+                             fisk.nr=c(41,43),
+                             vekt.vol.kode=c(44,44),
+
+                             vekt.volum=c(45,49),
+
+                             lengdeenhet=c(50,50),
+
+                             lengde=c(51,53),
+
+                             fett=c(54,54),
+                             kjonn=c(55,55),
+                             stadium=c(56,56),
+                             spesial.stadium=c(57,58),
+                             magefyll=c(59,59),
+                             ford.grad=c(60,60),
+                             lever=c(61,61),
+                             parasitt=c(62,62),
+                             sepsialkode=c(63,66),
+
+                             virvler=c(67,68),
+                             alder=c(69,70),
+                             gytealder=c(71,72),
+                             gytesoner=c(73,74),
+
+                             lesbarhet=c(75,75),
+                             type=c(76,76),
+                             rand=c(77,77),
+                             kjerne=c(78,78),
+
+                             kalibrering=c(79,80),
+
+                             vekstsoner=c(81,100),
+                             merketype=c(101,101),
+                             seriekode=c(102,103),
+                             merkenummer=c(104,109),
+                             vekt.vol.lode=c(110,110),
+
+                             gonademengde=c(111,114),
+                             levermengde=c(115,118),
+                             sloyd.vekt.vol=c(119,123),
+                             magevekt=c(124,127)
+  )
+
+  stopifnot(nrow(colspec) == nchar(coltypes))
+
+  vform <- readForm(file, "V", colspec, coltypes = coltypes)
+  if (nrow(vform) > 0){
+    vform$aar <- fixYear(vform$aar)
   }
 
-  return(data.table::data.table(aar=parseYear(getCols(line,2,4)),
-                                land=parseString(getCols(line, 5,6)),
-                                skipskode=parseString(getCols(line, 7)),
-                                skip=parseString(getCols(line, 8,13)),
-                                mnd=parseInt(getCols(line, 14,15)),
-                                dag=parseInt(getCols(line, 16,17)),
-                                st.nr=parseString(getCols(line, 18,21)),
-                                serie.nr=parseString(getCols(line, 22,26)),
-                                artskode=parseString(getCols(line, 27)),
-                                art=parseString(getCols(line,28,39)),
-                                del.nr=parseString(getCols(line,40)),
-                                intervall=parseString(getCols(line,41)),
-                                kjonn=parseString(getCols(line,42)),
-                                minste.lengdegr=parseInt(getCols(line,43,45)),
-                                lengdefrekvenser.i.antall=parseInt(getCols(line,40))
-
-  ))
+  return(vform)
 }
 
-#' Parses line from V-form (spesified in SPD handbook jan. 2010)
+#' Parses all V-lines from file (spesified in SPD handbook jan. 2010)
 #' @noRd
-parseVline <- function(line){
-  if (getCols(line,1,1) != "V"){
-    stop("Not a V-line")
+readWform <-function (file){
+  coltypes = "iccciicccccccccciciccic"
+  colspec <- readr::fwf_cols(aar=c(2,4),
+
+                             land=c(5,6),
+                             skipskode=c(7,7),
+                             skip=c(8,13),
+
+                             mnd=c(14,15),
+                             dag=c(16,17),
+
+                             st.nr=c(18,21),
+                             serie.nr=c(22,26),
+                             artskode=c(27,27),
+                             art=c(28,39),
+                             del.nr=c(40,40),
+                             fisk.nr=c(41,43),
+                             byttedyrkode=c(44,44),
+                             byttedyr=c(45,46),
+                             ford.gr=c(57,57),
+                             antall.enhet=c(58,58),
+
+                             antall=c(59,62),
+
+                             vektenhet=c(63,63),
+
+                             byttedyr.vekt=c(64,69),
+
+                             intervall.utviklingstrinn=c(70,70),
+                             lengdemal=c(71,71),
+
+                             minste.lengde=c(72,74),
+                             lengdefrekvens.i.antall=c(75,118)
+
+
+  )
+
+  stopifnot(nrow(colspec) == nchar(coltypes))
+
+  wform <- readForm(file, "W", colspec, coltypes = coltypes)
+  if (nrow(wform) > 0){
+    wform$aar <- fixYear(wform$aar)
   }
 
-  return(data.table::data.table(aar=parseYear(getCols(line,2,4)),
-                                land=parseString(getCols(line, 5,6)),
-                                skipskode=parseString(getCols(line, 7)),
-                                skip=parseString(getCols(line, 8,13)),
-                                mnd=parseInt(getCols(line, 14,15)),
-                                dag=parseInt(getCols(line, 16,17)),
-                                st.nr=parseString(getCols(line, 18,21)),
-                                serie.nr=parseString(getCols(line, 22,26)),
-                                artskode=parseString(getCols(line, 27)),
-                                art=parseString(getCols(line,28,39)),
-                                del.nr=parseString(getCols(line,40)),
-                                fisk.nr=parseInt(getCols(line,41,43)),
-                                vekt.vol.kode=parseString(getCols(line,44)),
-                                vekt.volum=parseInt(getCols(line,45,49)),
-                                lengdeenhet=parseString(getCols(line,50)),
-                                lengde=parseInt(getCols(line,51,53)),
-                                fett=parseString(getCols(line,54)),
-                                kjonn=parseString(getCols(line,55)),
-                                stadium=parseString(getCols(line,56)),
-                                spesial.stadium=parseString(getCols(line,57,58)),
-                                magefyll=parseString(getCols(line,59)),
-                                ford.grad=parseString(getCols(line,60)),
-                                lever=parseString(getCols(line,61)),
-                                parasitt=parseString(getCols(line,62)),
-                                sepsialkode=parseString(getCols(line,63,66)),
-                                virvler=parseInt(getCols(line,67,68)),
-                                alder=parseInt(getCols(line,69,70)),
-                                gytealder=parseInt(getCols(line,71,72)),
-                                gytesoner=parseInt(getCols(line,73,74)),
-                                lesbarhet=parseString(getCols(line,75)),
-                                type=parseString(getCols(line,76)),
-                                rand=parseString(getCols(line,77)),
-                                kjerne=parseString(getCols(line,78)),
-                                kalibrering=parseInt(getCols(line,79,80)),
-                                vekstsoner=parseString(getCols(line,81,100)),
-                                merketype=parseString(getCols(line,101)),
-                                seriekode=parseString(getCols(line,102,103)),
-                                merkenummer=parseString(getCols(line,104,109)),
-                                vekt.vol.lode=parseString(getCols(line,110)),
-                                gonademengde=parseInt(getCols(line,111,114)),
-                                levermengde=parseInt(getCols(line,115,118)),
-                                sloyd.vekt.vol=parseInt(getCols(line,119,123)),
-                                magevekt=parseInt(getCols(line,124,127))
-  ))
+  return(wform)
 }
 
-#' Parses line from W-form (spesified in SPD handbook jan. 2010)
-#' @noRd
-parseWline <- function(line){
-  stop("Not implemented")
-}
-
-#'  Parses SPD froms (spesified in SPD handbook jan. 2010)
-#'  Units are only standardized when interpretation does not depend on other fields.
+#'  SPD parser
+#'  @description Parses SPD froms (spesified in SPD handbook jan. 2010)
+#'  @details
+#'   Units are only standardized when interpretation does not depend on other fields.
+#'   Incomplete forms will produce warnings (parsing failures). Missing columns will be interpreted as NAs
+#'  @param filename path to file (SPD-format)
+#'  @param encoding encoding for the file
+#'  @retrun list with elements:
+#'   \describe{
+#'    \item{Sform}{S-form (stations / hauls)}
+#'    \item{Tform}{T-form (catch samples)}
+#'    \item{Uform}{U-form (length frequencies (fish))}
+#'    \item{Vform}{V-form (individual measurements (fish))}
+#'    \item{Wform}{W-form (length frequencies / devstage frequencies (prey))}
+#'   }
 parseSPD <- function(filename, encoding="latin1"){
   Sform <- NULL
   Tform <- NULL
@@ -239,28 +337,16 @@ parseSPD <- function(filename, encoding="latin1"){
   Vform <- NULL
   Wform <- NULL
 
-  f <- file(filename, open = "r")
-  lines <- readLines(f, encoding = encoding)
-  close(f)
-
-  for (l in lines){
-    if (getCols(l,1) == "S"){
-      Sform <- rbind(Sform, parseSline(l))
-    }
-    if (getCols(l,1) == "T"){
-      Tform <- rbind(Tform, parseTline(l))
-    }
-    if (getCols(l,1) == "U"){
-      Uform <- rbind(Uform, parseUline(l))
-    }
-    if (getCols(l,1) == "V"){
-      Vform <- rbind(Vform, parseVline(l))
-    }
-    if (getCols(l,1) == "W"){
-      Wform <- rbind(Wform, parseWline(l))
-    }
-
-  }
+  message("... parsing S forms ...")
+  Sform <- readSform(filename)
+  message("... parsing T forms ...")
+  Tform <- readTform(filename)
+  message("... parsing U forms ...")
+  Uform <- readUform(filename)
+  message("... parsing V forms ...")
+  Vform <- readVform(filename)
+  message("... parsing W forms ...")
+  Wform <- readWform(filename)
 
   ret <- list()
   ret$Sform <- Sform
